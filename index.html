@@ -1,0 +1,1971 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#090b0f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Hörhjälp</title>
+    <style>
+        /* =====================================================================
+           Design Tokens & Reset (100 % fristående för pålitlig offline-drift)
+           ===================================================================== */
+        :root {
+            --bg-base: #090b0f;
+            --bg-surface: #12161f;
+            --bg-surface-elevated: #1a202d;
+            --bg-surface-hover: #222a3a;
+            --border-subtle: rgba(255, 255, 255, 0.07);
+            --border-strong: rgba(255, 255, 255, 0.14);
+
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+
+            --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.28);
+            --accent-soft: rgba(56, 189, 248, 0.12);
+
+            --safe-green: #34d399;
+            --safe-green-soft: rgba(52, 211, 153, 0.14);
+
+            --warn-amber: #f59e0b;
+            --warn-amber-soft: rgba(245, 158, 11, 0.16);
+
+            --danger-red: #f87171;
+            --danger-red-soft: rgba(248, 113, 113, 0.14);
+
+            --radius-sm: 10px;
+            --radius-md: 16px;
+            --radius-lg: 22px;
+            --radius-full: 9999px;
+
+            --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --transition-fast: 150ms cubic-bezier(0.2, 0.8, 0.2, 1);
+            --transition-smooth: 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            -webkit-font-smoothing: antialiased;
+            overscroll-behavior: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+            min-height: 100dvh;
+            overflow-x: hidden;
+            background-image: radial-gradient(circle at 50% 28%, rgba(56, 189, 248, 0.06) 0%, rgba(9, 11, 15, 0) 58%);
+        }
+
+        /* =====================================================================
+           App-behållare (anpassad för mobil 100dvh + snygg centrering på desktop)
+           ===================================================================== */
+        .app-shell {
+            width: 100%;
+            max-width: 440px;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: calc(16px + env(safe-area-inset-top)) 20px calc(20px + env(safe-area-inset-bottom));
+            position: relative;
+        }
+
+        /* =====================================================================
+           Sidhuvud
+           ===================================================================== */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            z-index: 2;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent);
+            flex-shrink: 0;
+        }
+
+        .brand-title {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 650;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+        }
+
+        .brand-sub {
+            margin: 0;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 7px 12px;
+            border-radius: var(--radius-full);
+            font-size: 0.76rem;
+            font-weight: 600;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+            white-space: nowrap;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            transition: background var(--transition-fast), box-shadow var(--transition-fast);
+        }
+
+        .status-pill.active {
+            background: var(--safe-green-soft);
+            border-color: rgba(52, 211, 153, 0.3);
+            color: var(--safe-green);
+        }
+
+        .status-pill.active .status-dot {
+            background: var(--safe-green);
+            box-shadow: 0 0 8px var(--safe-green);
+        }
+
+        .status-pill.limiting {
+            background: var(--warn-amber-soft);
+            border-color: rgba(245, 158, 11, 0.4);
+            color: var(--warn-amber);
+        }
+
+        .status-pill.limiting .status-dot {
+            background: var(--warn-amber);
+            box-shadow: 0 0 8px var(--warn-amber);
+        }
+
+        .icon-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: var(--radius-full);
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast), border-color var(--transition-fast);
+        }
+
+        .icon-btn:hover {
+            background: var(--bg-surface-elevated);
+            color: var(--text-primary);
+            border-color: var(--border-strong);
+        }
+
+        .icon-btn:active {
+            transform: scale(0.94);
+        }
+
+        /* =====================================================================
+           Varnings- och felmeddelanden (ersätter alert helt)
+           ===================================================================== */
+        .banner-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
+            z-index: 2;
+        }
+
+        .banner {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 14px;
+            border-radius: var(--radius-md);
+            font-size: 0.8rem;
+            line-height: 1.4;
+            border: 1px solid transparent;
+        }
+
+        .banner.hidden {
+            display: none;
+        }
+
+        .banner-error {
+            background: var(--danger-red-soft);
+            border-color: rgba(248, 113, 113, 0.3);
+            color: #fecaca;
+        }
+
+        .banner-warn {
+            background: var(--warn-amber-soft);
+            border-color: rgba(245, 158, 11, 0.3);
+            color: #fde68a;
+        }
+
+        .banner svg {
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        /* =====================================================================
+           Mittsektion: Huvudknapp + Integrerad Ljudvisualisering
+           ===================================================================== */
+        .center-stage {
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 0;
+            min-height: 240px;
+        }
+
+        .power-stage {
+            position: relative;
+            width: min(72vw, 268px);
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #visualizerCanvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: block;
+        }
+
+        .power-btn {
+            position: relative;
+            z-index: 2;
+            width: 148px;
+            height: 148px;
+            border-radius: 50%;
+            border: 1.5px solid var(--border-strong);
+            background: linear-gradient(160deg, #1b2230 0%, #10141d 100%);
+            color: var(--text-primary);
+            box-shadow:
+                0 16px 36px rgba(0, 0, 0, 0.55),
+                inset 0 1px 1px rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: transform var(--transition-fast), background var(--transition-smooth), border-color var(--transition-smooth), box-shadow var(--transition-smooth);
+            user-select: none;
+        }
+
+        .power-btn:hover {
+            border-color: rgba(56, 189, 248, 0.45);
+        }
+
+        .power-btn:active {
+            transform: scale(0.95);
+        }
+
+        .power-btn.active {
+            background: linear-gradient(160deg, #0ea5e9 0%, #0284c7 100%);
+            border-color: rgba(186, 230, 253, 0.55);
+            color: #ffffff;
+            box-shadow:
+                0 14px 40px rgba(14, 165, 233, 0.42),
+                inset 0 2px 2px rgba(255, 255, 255, 0.28);
+        }
+
+        .power-btn.active.limiting {
+            background: linear-gradient(160deg, #f59e0b 0%, #d97706 100%);
+            border-color: rgba(254, 243, 199, 0.6);
+            box-shadow:
+                0 14px 40px rgba(245, 158, 11, 0.4),
+                inset 0 2px 2px rgba(255, 255, 255, 0.28);
+        }
+
+        .power-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        /* Diskret aktiv mikrofon- och skyddsindikator under knappen */
+        .stage-meta {
+            margin-top: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .mic-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            max-width: 92%;
+            padding: 6px 12px;
+            border-radius: var(--radius-full);
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            font-size: 0.76rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+        }
+
+        .mic-chip:hover {
+            background: var(--bg-surface-elevated);
+            color: var(--text-primary);
+            border-color: var(--border-strong);
+        }
+
+        .mic-chip-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .limiter-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            padding: 4px 10px;
+            border-radius: var(--radius-full);
+            background: transparent;
+            transition: color var(--transition-fast), background var(--transition-fast);
+        }
+
+        .limiter-badge.engaged {
+            color: var(--warn-amber);
+            background: var(--warn-amber-soft);
+        }
+
+        /* =====================================================================
+           Nedre kontrollzon (inom bekväm tumräckhåll)
+           ===================================================================== */
+        .controls-dock {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 2;
+        }
+
+        .card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+        }
+
+        /* Ljudlägen (segmenterad kontroll) */
+        .mode-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 10px;
+        }
+
+        .section-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            letter-spacing: 0.02em;
+        }
+
+        .mode-desc {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-align: right;
+        }
+
+        .segmented {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+            padding: 4px;
+            background: var(--bg-base);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+        }
+
+        .seg-btn {
+            min-height: 42px;
+            border: none;
+            border-radius: 10px;
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+            padding: 6px 4px;
+        }
+
+        .seg-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .seg-btn.active {
+            background: var(--bg-surface-elevated);
+            color: var(--accent);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        /* Förstärkningsreglage med +/- finjustering */
+        .gain-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 14px;
+        }
+
+        .gain-readout {
+            display: flex;
+            align-items: baseline;
+            gap: 7px;
+        }
+
+        .gain-multiplier {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+        }
+
+        .gain-db {
+            font-size: 0.76rem;
+            font-weight: 600;
+            color: var(--accent);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .step-btn {
+            width: 44px;
+            height: 44px;
+            flex-shrink: 0;
+            border-radius: 14px;
+            background: var(--bg-surface-elevated);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background var(--transition-fast), transform var(--transition-fast), border-color var(--transition-fast);
+        }
+
+        .step-btn:hover {
+            background: var(--bg-surface-hover);
+            border-color: var(--border-strong);
+        }
+
+        .step-btn:active {
+            transform: scale(0.92);
+        }
+
+        /* Anpassad, taktil range-slider */
+        .range-wrap {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            height: 44px;
+        }
+
+        input[type="range"].custom-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: var(--radius-full);
+            background: linear-gradient(
+                to right,
+                var(--accent) 0%,
+                var(--accent) var(--fill, 20%),
+                #263042 var(--fill, 20%),
+                #263042 100%
+            );
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"].custom-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #f8fafc;
+            border: 3px solid var(--accent);
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.5), 0 0 0 4px rgba(56, 189, 248, 0.16);
+            transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+        }
+
+        input[type="range"].custom-slider:active::-webkit-slider-thumb {
+            transform: scale(1.1);
+            box-shadow: 0 3px 14px rgba(0, 0, 0, 0.6), 0 0 0 7px rgba(56, 189, 248, 0.25);
+        }
+
+        input[type="range"].custom-slider::-moz-range-thumb {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #f8fafc;
+            border: 3px solid var(--accent);
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+        }
+
+        /* =====================================================================
+           Inställningspanel (Slide-up Drawer / Bottom Sheet)
+           ===================================================================== */
+        .sheet-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(4, 6, 10, 0.72);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            z-index: 40;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity var(--transition-smooth);
+        }
+
+        .sheet-backdrop.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .sheet {
+            position: fixed;
+            left: 50%;
+            bottom: 0;
+            transform: translate(-50%, 104%);
+            width: 100%;
+            max-width: 440px;
+            max-height: 88dvh;
+            overflow-y: auto;
+            background: var(--bg-surface);
+            border-top: 1px solid var(--border-strong);
+            border-left: 1px solid var(--border-subtle);
+            border-right: 1px solid var(--border-subtle);
+            border-radius: 26px 26px 0 0;
+            padding: 12px 20px calc(24px + env(safe-area-inset-bottom));
+            z-index: 50;
+            transition: transform var(--transition-smooth);
+            box-shadow: 0 -20px 50px rgba(0, 0, 0, 0.65);
+        }
+
+        .sheet.open {
+            transform: translate(-50%, 0);
+        }
+
+        .sheet-handle {
+            width: 40px;
+            height: 4px;
+            border-radius: var(--radius-full);
+            background: var(--border-strong);
+            margin: 0 auto 14px;
+        }
+
+        .sheet-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 18px;
+        }
+
+        .sheet-title {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 650;
+        }
+
+        .setting-group {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .setting-card {
+            background: var(--bg-base);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 14px;
+        }
+
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+        }
+
+        .setting-title {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0 0 3px;
+        }
+
+        .setting-desc {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin: 0;
+            line-height: 1.38;
+        }
+
+        /* Mikrofonväljare */
+        .select-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .custom-select {
+            flex: 1;
+            min-height: 44px;
+            background: var(--bg-surface-elevated);
+            color: var(--text-primary);
+            border: 1px solid var(--border-strong);
+            border-radius: 12px;
+            padding: 10px 12px;
+            font-family: inherit;
+            font-size: 0.84rem;
+            outline: none;
+            width: 100%;
+        }
+
+        .custom-select:focus {
+            border-color: var(--accent);
+        }
+
+        .custom-select:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 30px;
+            flex-shrink: 0;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .switch-track {
+            position: absolute;
+            inset: 0;
+            background: #273244;
+            border-radius: var(--radius-full);
+            cursor: pointer;
+            transition: background var(--transition-fast);
+        }
+
+        .switch-track::before {
+            content: "";
+            position: absolute;
+            left: 3px;
+            top: 3px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #f8fafc;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+            transition: transform var(--transition-fast);
+        }
+
+        .switch input:checked + .switch-track {
+            background: var(--accent);
+        }
+
+        .switch input:checked + .switch-track::before {
+            transform: translateX(20px);
+        }
+
+        /* Balansreglage V/H */
+        .balance-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .balance-reset-btn {
+            border: none;
+            background: var(--bg-surface-elevated);
+            color: var(--accent);
+            font-family: inherit;
+            font-size: 0.74rem;
+            font-weight: 600;
+            padding: 5px 10px;
+            border-radius: var(--radius-full);
+            cursor: pointer;
+        }
+
+        .balance-scale {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 4px;
+        }
+
+        .balance-end {
+            font-size: 0.74rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            width: 16px;
+            text-align: center;
+        }
+
+        input[type="range"].balance-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            flex: 1;
+            height: 6px;
+            border-radius: var(--radius-full);
+            background: #263042;
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"].balance-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #f8fafc;
+            border: 3px solid var(--accent);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+        }
+
+        input[type="range"].balance-slider::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #f8fafc;
+            border: 3px solid var(--accent);
+        }
+
+        .safety-note {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 14px;
+            border-radius: var(--radius-md);
+            background: var(--safe-green-soft);
+            border: 1px solid rgba(52, 211, 153, 0.24);
+            color: #a7f3d0;
+            font-size: 0.75rem;
+            line-height: 1.45;
+        }
+
+        .safety-note svg {
+            flex-shrink: 0;
+            margin-top: 1px;
+            color: var(--safe-green);
+        }
+
+        /* Mindre skärmar på höjden (t.ex. äldre iPhone SE) */
+        @media (max-height: 680px) {
+            .power-stage {
+                width: 205px;
+            }
+            .power-btn {
+                width: 124px;
+                height: 124px;
+            }
+            .card {
+                padding: 13px 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <!-- Sidhuvud -->
+        <header class="header">
+            <div class="brand">
+                <div class="brand-icon" aria-hidden="true">
+                    <!-- Inbyggd vektorikon: Öra / Ljudvåg -->
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M6 8.5a6.5 6.5 0 1 1 13 0c0 6-6 6-6 10a3.5 3.5 0 1 1-7 0"/>
+                        <path d="M15 8.5a2.5 2.5 0 0 0-5 0v1a2 2 0 1 1 0 4"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="brand-title">Hörhjälp</h1>
+                    <p class="brand-sub">Talfokus &amp; Hörselskydd</p>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <div id="statusPill" class="status-pill" role="status" aria-live="polite">
+                    <span class="status-dot"></span>
+                    <span id="statusText">Pausad</span>
+                </div>
+                <button id="openSettingsBtn" class="icon-btn" type="button" aria-label="Öppna inställningar" title="Inställningar">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Varnings- och felmeddelanden -->
+        <div class="banner-stack">
+            <div id="sslWarning" class="banner banner-warn hidden" role="alert">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                <span><strong>Ej HTTPS:</strong> Webbläsaren kräver en säker anslutning (HTTPS eller localhost) för att tillåta mikrofoner.</span>
+            </div>
+
+            <div id="errorBanner" class="banner banner-error hidden" role="alert">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <span id="errorText"></span>
+            </div>
+        </div>
+
+        <!-- Mittsektion: Huvudknapp med integrerad ljudring -->
+        <main class="center-stage">
+            <div class="power-stage">
+                <canvas id="visualizerCanvas" aria-hidden="true"></canvas>
+                <button id="toggleBtn" class="power-btn" type="button" aria-pressed="false" aria-label="Starta hörselförstärkare">
+                    <span id="powerIcon" aria-hidden="true">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+                            <line x1="12" y1="2" x2="12" y2="12"/>
+                        </svg>
+                    </span>
+                    <span id="powerLabel" class="power-label">Starta</span>
+                </button>
+            </div>
+
+            <div class="stage-meta">
+                <!-- Visar aktiv mikrofon och öppnar inställningar vid tryck -->
+                <button id="micChipBtn" class="mic-chip" type="button" title="Byt mikrofon i inställningar">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                        <line x1="12" y1="19" x2="12" y2="23"/>
+                    </svg>
+                    <span id="micChipText" class="mic-chip-text">Koppla in hörlurar &amp; tryck Starta</span>
+                </button>
+
+                <!-- Diskret bekräftelse på att skyddslimitern jobbar -->
+                <div id="limiterBadge" class="limiter-badge">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                    <span id="limiterText">Hörselskydd redo</span>
+                </div>
+            </div>
+        </main>
+
+        <!-- Nedre kontrollzon: Ljudlägen + Förstärkning -->
+        <section class="controls-dock" aria-label="Ljudkontroller">
+            <!-- Ljudlägen -->
+            <div class="card">
+                <div class="mode-header">
+                    <span class="section-label">Ljudläge</span>
+                    <span id="modeDesc" class="mode-desc">Skär basbuller · Lyfter tal</span>
+                </div>
+                <div class="segmented" role="radiogroup" aria-label="Välj ljudläge">
+                    <button type="button" class="seg-btn" data-mode="natural" role="radio" aria-checked="false">Naturlig</button>
+                    <button type="button" class="seg-btn active" data-mode="speech" role="radio" aria-checked="true">Talfokus</button>
+                    <button type="button" class="seg-btn" data-mode="noisy" role="radio" aria-checked="false">Bullrig</button>
+                </div>
+            </div>
+
+            <!-- Förstärkning -->
+            <div class="card">
+                <div class="gain-header">
+                    <span class="section-label">Förstärkning</span>
+                    <div class="gain-readout">
+                        <span id="gainMultiplier" class="gain-multiplier">1.5×</span>
+                        <span id="gainDb" class="gain-db">+3.5 dB</span>
+                    </div>
+                </div>
+                <div class="slider-row">
+                    <button id="gainDownBtn" class="step-btn" type="button" aria-label="Minska förstärkning">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                    </button>
+                    <div class="range-wrap">
+                        <input
+                            type="range"
+                            id="gainSlider"
+                            class="custom-slider"
+                            min="0"
+                            max="5"
+                            step="0.1"
+                            value="1.5"
+                            aria-label="Förstärkning"
+                        >
+                    </div>
+                    <button id="gainUpBtn" class="step-btn" type="button" aria-label="Öka förstärkning">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+                            <line x1="12" y1="5" x2="12" y2="19"/>
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Inställningspanel (Slide-up Sheet) -->
+    <div id="sheetBackdrop" class="sheet-backdrop" aria-hidden="true"></div>
+    <aside id="settingsSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <div class="sheet-header">
+            <h2 id="settingsTitle" class="sheet-title">Inställningar</h2>
+            <button id="closeSettingsBtn" class="icon-btn" type="button" aria-label="Stäng inställningar">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="setting-group">
+            <!-- Mikrofonval -->
+            <div class="setting-card">
+                <p class="setting-title">Mikrofoningång</p>
+                <p class="setting-desc">Välj mottagaren för dina trådlösa mikrofoner. Listan uppdateras automatiskt när du ansluter enheter.</p>
+                <div class="select-row">
+                    <select id="micSelect" class="custom-select" disabled>
+                        <option value="">Starta först för att lista mikrofoner</option>
+                    </select>
+                    <button id="refreshMicsBtn" class="step-btn" type="button" aria-label="Uppdatera mikrofonlista" title="Uppdatera lista">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="23 4 23 10 17 10"/>
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mono-mix för två trådlösa mikrofoner -->
+            <div class="setting-card">
+                <div class="setting-row">
+                    <div>
+                        <p class="setting-title">Mono-mix (två mikrofoner)</p>
+                        <p class="setting-desc">Slår ihop vänster och höger kanal så att båda personerna hörs lika tydligt i båda öronen.</p>
+                    </div>
+                    <label class="switch" aria-label="Mono-mix">
+                        <input type="checkbox" id="monoToggle" checked>
+                        <span class="switch-track"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Valbar brusreducering (Låg latens vs Brusfilter) -->
+            <div class="setting-card">
+                <div class="setting-row">
+                    <div>
+                        <p class="setting-title">Webbläsarens brusfilter</p>
+                        <p class="setting-desc">Av ger lägst fördröjning och renast röst med myggor. Slå på vid kraftigt statiskt sus.</p>
+                    </div>
+                    <label class="switch" aria-label="Webbläsarens brusfilter">
+                        <input type="checkbox" id="noiseSuppressionToggle">
+                        <span class="switch-track"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Balans vänster / höger öra -->
+            <div id="balanceCard" class="setting-card">
+                <div class="balance-header">
+                    <div>
+                        <p class="setting-title">Balans (Vänster / Höger)</p>
+                        <p id="balanceReadout" class="setting-desc">Centrerad (0 %)</p>
+                    </div>
+                    <button id="resetBalanceBtn" class="balance-reset-btn" type="button">Centrera</button>
+                </div>
+                <div class="balance-scale">
+                    <span class="balance-end">V</span>
+                    <input type="range" id="balanceSlider" class="balance-slider" min="-1" max="1" step="0.05" value="0" aria-label="Vänster och höger balans">
+                    <span class="balance-end">H</span>
+                </div>
+            </div>
+
+            <!-- Info om alltid aktivt hörselskydd -->
+            <div class="safety-note">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <polyline points="9 12 11 14 15 10"/>
+                </svg>
+                <span><strong>Skyddslimiter alltid aktiv:</strong> Plötsliga höga ljud som bestickskrammel, hostningar eller klädskrap dämpas automatiskt innan de når dina in-ears.</span>
+            </div>
+        </div>
+    </aside>
+
+    <script>
+        (() => {
+            'use strict';
+
+            /* =====================================================================
+               Konfiguration: Ljudlägen (EQ + dynamisk talutjämning)
+               ===================================================================== */
+            const MODES = {
+                natural: {
+                    name: 'Naturlig',
+                    desc: 'Lätt mullerfilter · Ofärgat ljud',
+                    highPassFreq: 100,
+                    highPassQ: 0.7,
+                    presenceFreq: 3000,
+                    presenceQ: 1.0,
+                    presenceGain: 0,
+                    highShelfFreq: 8500,
+                    highShelfGain: 0,
+                    // Mjuk kompressor nästintill avstängd i naturligt läge
+                    compThreshold: -8,
+                    compKnee: 12,
+                    compRatio: 2,
+                    compAttack: 0.005,
+                    compRelease: 0.16
+                },
+                speech: {
+                    name: 'Talfokus',
+                    desc: 'Skär basbuller · Lyfter konsonanter',
+                    highPassFreq: 180,
+                    highPassQ: 0.8,
+                    presenceFreq: 3000,
+                    presenceQ: 1.1,
+                    presenceGain: 5.5,
+                    highShelfFreq: 8000,
+                    highShelfGain: -2.0,
+                    compThreshold: -18,
+                    compKnee: 14,
+                    compRatio: 4.5,
+                    compAttack: 0.004,
+                    compRelease: 0.16
+                },
+                noisy: {
+                    name: 'Bullrig',
+                    desc: 'Kraftigt basfilter · Max talskärpa',
+                    highPassFreq: 260,
+                    highPassQ: 0.9,
+                    presenceFreq: 2800,
+                    presenceQ: 1.2,
+                    presenceGain: 8.0,
+                    highShelfFreq: 6500,
+                    highShelfGain: -5.0,
+                    compThreshold: -24,
+                    compKnee: 10,
+                    compRatio: 7.5,
+                    compAttack: 0.002,
+                    compRelease: 0.13
+                }
+            };
+
+            const STORAGE_KEY = 'horhjalp_settings_v1';
+
+            /* =====================================================================
+               Applikationstillstånd
+               ===================================================================== */
+            const state = {
+                isRunning: false,
+                hasPermissions: false,
+                gain: 1.5,
+                mode: 'speech',
+                monoMix: true,
+                noiseSuppression: false,
+                balance: 0,
+                selectedMicId: '',
+                activeMicLabel: ''
+            };
+
+            /* =====================================================================
+               Web Audio-noder & livscykelreferenser
+               ===================================================================== */
+            let audioContext = null;
+            let mediaStream = null;
+            let sourceNode = null;
+            let inputMixNode = null;
+            let highPassNode = null;
+            let presenceNode = null;
+            let highShelfNode = null;
+            let gainNode = null;
+            let speechCompressorNode = null;
+            let safetyLimiterNode = null;
+            let pannerNode = null;
+            let analyserNode = null;
+
+            let wakeLock = null;
+            let animationId = null;
+            let smoothedLevel = 0;
+            let limiterHoldUntil = 0;
+            let isLimiterVisualActive = false;
+
+            /* =====================================================================
+               DOM-element
+               ===================================================================== */
+            const el = {
+                statusPill: document.getElementById('statusPill'),
+                statusText: document.getElementById('statusText'),
+                sslWarning: document.getElementById('sslWarning'),
+                errorBanner: document.getElementById('errorBanner'),
+                errorText: document.getElementById('errorText'),
+
+                toggleBtn: document.getElementById('toggleBtn'),
+                powerIcon: document.getElementById('powerIcon'),
+                powerLabel: document.getElementById('powerLabel'),
+                canvas: document.getElementById('visualizerCanvas'),
+
+                micChipBtn: document.getElementById('micChipBtn'),
+                micChipText: document.getElementById('micChipText'),
+                limiterBadge: document.getElementById('limiterBadge'),
+                limiterText: document.getElementById('limiterText'),
+
+                modeButtons: document.querySelectorAll('.seg-btn'),
+                modeDesc: document.getElementById('modeDesc'),
+
+                gainSlider: document.getElementById('gainSlider'),
+                gainMultiplier: document.getElementById('gainMultiplier'),
+                gainDb: document.getElementById('gainDb'),
+                gainDownBtn: document.getElementById('gainDownBtn'),
+                gainUpBtn: document.getElementById('gainUpBtn'),
+
+                openSettingsBtn: document.getElementById('openSettingsBtn'),
+                closeSettingsBtn: document.getElementById('closeSettingsBtn'),
+                sheetBackdrop: document.getElementById('sheetBackdrop'),
+                settingsSheet: document.getElementById('settingsSheet'),
+
+                micSelect: document.getElementById('micSelect'),
+                refreshMicsBtn: document.getElementById('refreshMicsBtn'),
+                monoToggle: document.getElementById('monoToggle'),
+                noiseSuppressionToggle: document.getElementById('noiseSuppressionToggle'),
+                balanceCard: document.getElementById('balanceCard'),
+                balanceSlider: document.getElementById('balanceSlider'),
+                balanceReadout: document.getElementById('balanceReadout'),
+                resetBalanceBtn: document.getElementById('resetBalanceBtn')
+            };
+
+            const ctx = el.canvas.getContext('2d');
+
+            /* =====================================================================
+               Lokal lagring av inställningar (felsäker mot begränsade webbläsare)
+               ===================================================================== */
+            function loadSettings() {
+                try {
+                    const raw = localStorage.getItem(STORAGE_KEY);
+                    if (!raw) return;
+                    const parsed = JSON.parse(raw);
+
+                    if (typeof parsed.gain === 'number' && parsed.gain >= 0 && parsed.gain <= 5) {
+                        state.gain = parsed.gain;
+                    }
+                    if (parsed.mode && MODES[parsed.mode]) {
+                        state.mode = parsed.mode;
+                    }
+                    if (typeof parsed.monoMix === 'boolean') {
+                        state.monoMix = parsed.monoMix;
+                    }
+                    if (typeof parsed.noiseSuppression === 'boolean') {
+                        state.noiseSuppression = parsed.noiseSuppression;
+                    }
+                    if (typeof parsed.balance === 'number' && parsed.balance >= -1 && parsed.balance <= 1) {
+                        state.balance = parsed.balance;
+                    }
+                    if (typeof parsed.selectedMicId === 'string') {
+                        state.selectedMicId = parsed.selectedMicId;
+                    }
+                } catch (e) {
+                    // Ignorera om localStorage är blockerat
+                }
+            }
+
+            function saveSettings() {
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                        gain: state.gain,
+                        mode: state.mode,
+                        monoMix: state.monoMix,
+                        noiseSuppression: state.noiseSuppression,
+                        balance: state.balance,
+                        selectedMicId: state.selectedMicId
+                    }));
+                } catch (e) {
+                    // Ignorera lagringsfel
+                }
+            }
+
+            /* =====================================================================
+               UI-hjälpfunktioner
+               ===================================================================== */
+            function showError(message) {
+                el.errorText.textContent = message;
+                el.errorBanner.classList.remove('hidden');
+            }
+
+            function clearError() {
+                el.errorBanner.classList.add('hidden');
+                el.errorText.textContent = '';
+            }
+
+            function formatGainDb(multiplier) {
+                if (multiplier <= 0.001) return 'Tyst';
+                const db = 20 * Math.log10(multiplier);
+                const sign = db >= 0 ? '+' : '';
+                return `${sign}${db.toFixed(1)} dB`;
+            }
+
+            function updateGainUI() {
+                const clamped = Math.max(0, Math.min(5, Math.round(state.gain * 10) / 10));
+                state.gain = clamped;
+                el.gainSlider.value = clamped.toFixed(1);
+                el.gainSlider.style.setProperty('--fill', `${(clamped / 5) * 100}%`);
+                el.gainMultiplier.textContent = `${clamped.toFixed(1)}×`;
+                el.gainDb.textContent = formatGainDb(clamped);
+            }
+
+            function updateModeUI() {
+                const preset = MODES[state.mode];
+                el.modeDesc.textContent = preset.desc;
+                el.modeButtons.forEach((btn) => {
+                    const isSelected = btn.dataset.mode === state.mode;
+                    btn.classList.toggle('active', isSelected);
+                    btn.setAttribute('aria-checked', String(isSelected));
+                });
+            }
+
+            function updateBalanceUI() {
+                el.balanceSlider.value = state.balance.toFixed(2);
+                const pct = Math.round(state.balance * 100);
+                if (pct === 0) {
+                    el.balanceReadout.textContent = 'Centrerad (0 %)';
+                } else if (pct < 0) {
+                    el.balanceReadout.textContent = `Vänster ${Math.abs(pct)} %`;
+                } else {
+                    el.balanceReadout.textContent = `Höger ${pct} %`;
+                }
+            }
+
+            function updateMicChipUI() {
+                if (state.isRunning && state.activeMicLabel) {
+                    el.micChipText.textContent = state.activeMicLabel;
+                } else if (state.hasPermissions && el.micSelect.selectedOptions[0]) {
+                    el.micChipText.textContent = el.micSelect.selectedOptions[0].textContent;
+                } else {
+                    el.micChipText.textContent = 'Koppla in hörlurar & tryck Starta';
+                }
+            }
+
+            function setPowerStateUI(active) {
+                el.toggleBtn.classList.toggle('active', active);
+                el.toggleBtn.setAttribute('aria-pressed', String(active));
+                el.toggleBtn.setAttribute('aria-label', active ? 'Pausa hörselförstärkare' : 'Starta hörselförstärkare');
+
+                if (active) {
+                    el.powerIcon.innerHTML = `
+                        <svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor">
+                            <rect x="6" y="5" width="4.5" height="14" rx="1.5"/>
+                            <rect x="13.5" y="5" width="4.5" height="14" rx="1.5"/>
+                        </svg>`;
+                    el.powerLabel.textContent = 'Aktiv';
+                    el.statusPill.classList.add('active');
+                    el.statusPill.classList.remove('limiting');
+                    el.statusText.textContent = 'Aktiv';
+                    el.limiterText.textContent = 'Hörselskydd övervakar';
+                } else {
+                    el.powerIcon.innerHTML = `
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+                            <line x1="12" y1="2" x2="12" y2="12"/>
+                        </svg>`;
+                    el.powerLabel.textContent = 'Starta';
+                    el.toggleBtn.classList.remove('limiting');
+                    el.statusPill.classList.remove('active', 'limiting');
+                    el.statusText.textContent = 'Pausad';
+                    el.limiterBadge.classList.remove('engaged');
+                    el.limiterText.textContent = 'Hörselskydd redo';
+                }
+                updateMicChipUI();
+            }
+
+            function setLimiterVisual(engaged) {
+                if (engaged === isLimiterVisualActive) return;
+                isLimiterVisualActive = engaged;
+
+                el.toggleBtn.classList.toggle('limiting', engaged && state.isRunning);
+                el.statusPill.classList.toggle('limiting', engaged && state.isRunning);
+                el.limiterBadge.classList.toggle('engaged', engaged && state.isRunning);
+
+                if (state.isRunning) {
+                    el.statusText.textContent = engaged ? 'Skydd aktivt' : 'Aktiv';
+                    el.limiterText.textContent = engaged ? 'Dämpar plötsligt ljud' : 'Hörselskydd övervakar';
+                }
+            }
+
+            /* =====================================================================
+               Inställningspanel (Drawer)
+               ===================================================================== */
+            function openSettings() {
+                el.sheetBackdrop.classList.add('open');
+                el.settingsSheet.classList.add('open');
+                el.sheetBackdrop.setAttribute('aria-hidden', 'false');
+            }
+
+            function closeSettings() {
+                el.sheetBackdrop.classList.remove('open');
+                el.settingsSheet.classList.remove('open');
+                el.sheetBackdrop.setAttribute('aria-hidden', 'true');
+            }
+
+            /* =====================================================================
+               Web Audio API: Ljudmotor & Realtidsjustering
+               ===================================================================== */
+            function applyModeParameters(smooth = true) {
+                if (!audioContext || !highPassNode || !presenceNode || !highShelfNode || !speechCompressorNode) return;
+
+                const preset = MODES[state.mode];
+                const now = audioContext.currentTime;
+                const tc = smooth ? 0.04 : 0.001;
+
+                highPassNode.frequency.setTargetAtTime(preset.highPassFreq, now, tc);
+                highPassNode.Q.setTargetAtTime(preset.highPassQ, now, tc);
+
+                presenceNode.frequency.setTargetAtTime(preset.presenceFreq, now, tc);
+                presenceNode.Q.setTargetAtTime(preset.presenceQ, now, tc);
+                presenceNode.gain.setTargetAtTime(preset.presenceGain, now, tc);
+
+                highShelfNode.frequency.setTargetAtTime(preset.highShelfFreq, now, tc);
+                highShelfNode.gain.setTargetAtTime(preset.highShelfGain, now, tc);
+
+                speechCompressorNode.threshold.setTargetAtTime(preset.compThreshold, now, tc);
+                speechCompressorNode.knee.setTargetAtTime(preset.compKnee, now, tc);
+                speechCompressorNode.ratio.setTargetAtTime(preset.compRatio, now, tc);
+                speechCompressorNode.attack.setTargetAtTime(preset.compAttack, now, tc);
+                speechCompressorNode.release.setTargetAtTime(preset.compRelease, now, tc);
+            }
+
+            function applyMonoMixSetting() {
+                if (!inputMixNode) return;
+                if (state.monoMix) {
+                    // Summerar vänster + höger (t.ex. mygga 1 + mygga 2) till ren mono i båda öronen
+                    inputMixNode.channelCount = 1;
+                    inputMixNode.channelCountMode = 'explicit';
+                    inputMixNode.channelInterpretation = 'speakers';
+                } else {
+                    inputMixNode.channelCount = 2;
+                    inputMixNode.channelCountMode = 'max';
+                    inputMixNode.channelInterpretation = 'speakers';
+                }
+            }
+
+            function applyGainSetting() {
+                if (!audioContext || !gainNode) return;
+                // Mjuk övergång för att helt undvika knäppande ljud
+                gainNode.gain.setTargetAtTime(state.gain, audioContext.currentTime, 0.03);
+            }
+
+            function applyBalanceSetting() {
+                if (!audioContext || !pannerNode) return;
+                pannerNode.pan.setTargetAtTime(state.balance, audioContext.currentTime, 0.03);
+            }
+
+            async function startAudio(requestedDeviceId) {
+                clearError();
+
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    showError('Din webbläsare saknar stöd för mikrofonåtkomst (eller saknar HTTPS).');
+                    return;
+                }
+
+                try {
+                    // 1. Skapa eller återuppta AudioContext med lägsta möjliga fördröjning
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (!audioContext) {
+                        audioContext = new AudioCtx({ latencyHint: 'interactive' });
+                    }
+                    if (audioContext.state === 'suspended') {
+                        await audioContext.resume();
+                    }
+
+                    // 2. Bygg mikrofoninställningar (begär 2 kanaler om tillgängligt så båda myggorna fångas)
+                    const audioConstraints = {
+                        echoCancellation: false,
+                        autoGainControl: false,
+                        noiseSuppression: state.noiseSuppression,
+                        channelCount: { ideal: 2 }
+                    };
+
+                    const targetId = requestedDeviceId !== undefined ? requestedDeviceId : state.selectedMicId;
+                    if (targetId && state.hasPermissions) {
+                        audioConstraints.deviceId = { ideal: targetId };
+                    }
+
+                    el.statusText.textContent = 'Ansluter...';
+                    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+
+                    state.hasPermissions = true;
+
+                    // Läs ut vilken mikrofon som faktiskt blev aktiv
+                    const activeTrack = mediaStream.getAudioTracks()[0];
+                    if (activeTrack) {
+                        state.activeMicLabel = activeTrack.label || 'Standardmikrofon';
+                        const settings = activeTrack.getSettings ? activeTrack.getSettings() : {};
+                        if (settings.deviceId) {
+                            state.selectedMicId = settings.deviceId;
+                        }
+                        // Hantera om en trådlös mottagare kopplas ur under användning
+                        activeTrack.onended = () => {
+                            if (state.isRunning) {
+                                showError('Mikrofonen kopplades ifrån. Anslut igen och tryck Starta.');
+                                stopAudio();
+                            }
+                        };
+                    }
+
+                    // 3. Bygg ljudkedjan:
+                    // Source -> InputMix (Mono/Stereo) -> HighPass -> Presence -> HighShelf
+                    // -> Gain -> Tal-kompressor -> Skyddslimiter -> Balans -> Analyser -> Hörlurar
+                    sourceNode = audioContext.createMediaStreamSource(mediaStream);
+
+                    inputMixNode = audioContext.createGain();
+                    applyMonoMixSetting();
+
+                    highPassNode = audioContext.createBiquadFilter();
+                    highPassNode.type = 'highpass';
+
+                    presenceNode = audioContext.createBiquadFilter();
+                    presenceNode.type = 'peaking';
+
+                    highShelfNode = audioContext.createBiquadFilter();
+                    highShelfNode.type = 'highshelf';
+
+                    gainNode = audioContext.createGain();
+                    gainNode.gain.value = state.gain;
+
+                    speechCompressorNode = audioContext.createDynamicsCompressor();
+
+                    // Alltid aktiv brickwall-skyddslimiter som stoppar plötsliga smällar
+                    safetyLimiterNode = audioContext.createDynamicsCompressor();
+                    safetyLimiterNode.threshold.value = -2.0;
+                    safetyLimiterNode.knee.value = 0.0;
+                    safetyLimiterNode.ratio.value = 20.0;
+                    safetyLimiterNode.attack.value = 0.001;
+                    safetyLimiterNode.release.value = 0.08;
+
+                    applyModeParameters(false);
+
+                    // StereoPannerNode (med säker kontroll för äldre webbläsare)
+                    if (typeof audioContext.createStereoPanner === 'function') {
+                        pannerNode = audioContext.createStereoPanner();
+                        pannerNode.pan.value = state.balance;
+                    } else {
+                        pannerNode = null;
+                        el.balanceCard.style.display = 'none';
+                    }
+
+                    analyserNode = audioContext.createAnalyser();
+                    analyserNode.fftSize = 256;
+                    analyserNode.smoothingTimeConstant = 0.72;
+
+                    // Koppla ihop ljudkedjan
+                    sourceNode.connect(inputMixNode);
+                    inputMixNode.connect(highPassNode);
+                    highPassNode.connect(presenceNode);
+                    presenceNode.connect(highShelfNode);
+                    highShelfNode.connect(gainNode);
+                    gainNode.connect(speechCompressorNode);
+                    speechCompressorNode.connect(safetyLimiterNode);
+
+                    if (pannerNode) {
+                        safetyLimiterNode.connect(pannerNode);
+                        pannerNode.connect(analyserNode);
+                    } else {
+                        safetyLimiterNode.connect(analyserNode);
+                    }
+                    analyserNode.connect(audioContext.destination);
+
+                    // 4. Uppdatera tillstånd, visualisering, skärmlås och mikrofonlista
+                    state.isRunning = true;
+                    isLimiterVisualActive = false;
+                    setPowerStateUI(true);
+                    startVisualizer();
+                    await requestWakeLock();
+                    await refreshDeviceList();
+                    saveSettings();
+
+                } catch (err) {
+                    console.error('Ljudstart misslyckades:', err);
+                    let msg = 'Kunde inte starta ljudet. Kontrollera mikrofon och hörlurar.';
+                    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                        msg = 'Mikrofonåtkomst nekades. Tillåt mikrofonen i webbläsarens inställningar.';
+                    } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                        msg = 'Ingen mikrofon hittades. Kontrollera att mottagaren är inkopplad.';
+                    } else if (err.name === 'NotReadableError') {
+                        msg = 'Mikrofonen används redan av en annan app.';
+                    }
+                    showError(msg);
+                    await stopAudio();
+                }
+            }
+
+            async function stopAudio() {
+                state.isRunning = false;
+
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                }
+
+                // Stoppa mikrofonspår
+                if (mediaStream) {
+                    mediaStream.getTracks().forEach((track) => {
+                        track.onended = null;
+                        track.stop();
+                    });
+                    mediaStream = null;
+                }
+
+                // Koppla från samtliga noder för ren resurshantering
+                const nodes = [
+                    sourceNode, inputMixNode, highPassNode, presenceNode,
+                    highShelfNode, gainNode, speechCompressorNode,
+                    safetyLimiterNode, pannerNode, analyserNode
+                ];
+                nodes.forEach((node) => {
+                    if (node) {
+                        try { node.disconnect(); } catch (e) {}
+                    }
+                });
+
+                sourceNode = inputMixNode = highPassNode = presenceNode = null;
+                highShelfNode = gainNode = speechCompressorNode = null;
+                safetyLimiterNode = pannerNode = analyserNode = null;
+
+                // Pausa AudioContext för att spara batteri när appen är avstängd
+                if (audioContext && audioContext.state === 'running') {
+                    try {
+                        await audioContext.suspend();
+                    } catch (e) {}
+                }
+
+                // Släpp skärmlåset
+                await releaseWakeLock();
+
+                smoothedLevel = 0;
+                isLimiterVisualActive = false;
+                setPowerStateUI(false);
+                drawIdleRing();
+            }
+
+            async function restartAudioIfRunning(specificDeviceId) {
+                if (!state.isRunning) return;
+                await stopAudio();
+                await startAudio(specificDeviceId);
+            }
+
+            /* =====================================================================
+               Mikrofonlista & Automatisk enhetsupptäckt
+               ===================================================================== */
+            async function refreshDeviceList() {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+
+                try {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const inputs = devices.filter((d) => d.kind === 'audioinput');
+
+                    // Kontrollera om etiketter är synliga (= behörighet finns)
+                    const labelsVisible = inputs.some((d) => Boolean(d.label));
+                    if (labelsVisible) {
+                        state.hasPermissions = true;
+                    }
+
+                    el.micSelect.innerHTML = '';
+
+                    if (inputs.length === 0) {
+                        el.micSelect.add(new Option('Inga mikrofoner hittades', ''));
+                        el.micSelect.disabled = true;
+                        return;
+                    }
+
+                    inputs.forEach((device, idx) => {
+                        const label = device.label || `Mikrofon ${idx + 1}`;
+                        el.micSelect.add(new Option(label, device.deviceId));
+                    });
+
+                    el.micSelect.disabled = !state.hasPermissions;
+
+                    // Återställ valt alternativ om det finns kvar i listan
+                    const hasSaved = inputs.some((d) => d.deviceId === state.selectedMicId);
+                    if (hasSaved) {
+                        el.micSelect.value = state.selectedMicId;
+                    } else if (inputs[0]) {
+                        state.selectedMicId = inputs[0].deviceId;
+                        el.micSelect.value = inputs[0].deviceId;
+                    }
+
+                    updateMicChipUI();
+                } catch (err) {
+                    console.warn('Kunde inte lista ljudenheter:', err);
+                }
+            }
+
+            /* =====================================================================
+               Skärmlås (Wake Lock) med automatisk återaktivering vid appbyte
+               ===================================================================== */
+            async function requestWakeLock() {
+                if (!('wakeLock' in navigator)) return;
+                try {
+                    if (!wakeLock) {
+                        wakeLock = await navigator.wakeLock.request('screen');
+                        wakeLock.addEventListener('release', () => {
+                            wakeLock = null;
+                        });
+                    }
+                } catch (e) {
+                    // Tyst fallback om enheten nekar Wake Lock (t.ex. låg batterinivå)
+                }
+            }
+
+            async function releaseWakeLock() {
+                if (wakeLock) {
+                    try {
+                        await wakeLock.release();
+                    } catch (e) {}
+                    wakeLock = null;
+                }
+            }
+
+            document.addEventListener('visibilitychange', async () => {
+                if (document.visibilityState === 'visible' && state.isRunning) {
+                    await requestWakeLock();
+                    if (audioContext && audioContext.state === 'suspended') {
+                        try { await audioContext.resume(); } catch (e) {}
+                    }
+                }
+            });
+
+            /* =====================================================================
+               Visualisering: Skarp Retina-canvas runt huvudknappen
+               ===================================================================== */
+            let canvasSize = 260;
+
+            function resizeCanvas() {
+                const rect = el.canvas.getBoundingClientRect();
+                if (!rect.width || !rect.height) return;
+
+                const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+                canvasSize = rect.width;
+                el.canvas.width = Math.round(rect.width * dpr);
+                el.canvas.height = Math.round(rect.height * dpr);
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+                if (!state.isRunning) {
+                    drawIdleRing();
+                }
+            }
+
+            function drawIdleRing() {
+                const w = canvasSize;
+                const cx = w / 2;
+                const cy = w / 2;
+                const baseRadius = Math.min(w * 0.34, 86);
+
+                ctx.clearRect(0, 0, w, w);
+
+                // Lugn, diskret yttre cirkel i viloläge
+                ctx.beginPath();
+                ctx.arc(cx, cy, baseRadius + 10, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(148, 163, 184, 0.14)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(cx, cy, baseRadius + 24, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(148, 163, 184, 0.06)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+
+            function startVisualizer() {
+                if (!analyserNode) return;
+                const timeData = new Uint8Array(analyserNode.fftSize);
+                const freqData = new Uint8Array(analyserNode.frequencyBinCount);
+
+                const render = (timestamp) => {
+                    if (!state.isRunning || !analyserNode) return;
+                    animationId = requestAnimationFrame(render);
+
+                    analyserNode.getByteTimeDomainData(timeData);
+                    analyserNode.getByteFrequencyData(freqData);
+
+                    // Beräkna mjuk RMS-volym (0.0 -> 1.0)
+                    let sumSq = 0;
+                    for (let i = 0; i < timeData.length; i++) {
+                        const norm = (timeData[i] - 128) / 128;
+                        sumSq += norm * norm;
+                    }
+                    const rms = Math.sqrt(sumSq / timeData.length);
+                    const targetLevel = Math.min(1, rms * 3.8);
+                    smoothedLevel += (targetLevel - smoothedLevel) * 0.22;
+
+                    // Kontrollera om skyddslimitern aktivt dämpar en topp
+                    const reduction = safetyLimiterNode ? safetyLimiterNode.reduction : 0;
+                    if (reduction < -2.5) {
+                        limiterHoldUntil = timestamp + 420;
+                    }
+                    const limitingNow = timestamp < limiterHoldUntil;
+                    setLimiterVisual(limitingNow);
+
+                    // Rita radiell halo + mjuk frekvenskrans runt knappen
+                    const w = canvasSize;
+                    const cx = w / 2;
+                    const cy = w / 2;
+                    const btnRadius = el.toggleBtn.offsetWidth / 2;
+                    const maxExpand = Math.max(18, (w / 2) - btnRadius - 6);
+
+                    ctx.clearRect(0, 0, w, w);
+
+                    const primaryRgb = limitingNow ? '245, 158, 11' : '56, 189, 248';
+                    const secondaryRgb = limitingNow ? '251, 191, 36' : '52, 211, 153';
+
+                    // 1. Mjuk, pulserande ljudhalo
+                    const haloRadius = btnRadius + 6 + smoothedLevel * maxExpand;
+                    const grad = ctx.createRadialGradient(cx, cy, btnRadius * 0.88, cx, cy, haloRadius);
+                    grad.addColorStop(0, `rgba(${primaryRgb}, ${0.26 + smoothedLevel * 0.2})`);
+                    grad.addColorStop(0.65, `rgba(${primaryRgb}, ${0.08 + smoothedLevel * 0.08})`);
+                    grad.addColorStop(1, `rgba(${primaryRgb}, 0)`);
+
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, haloRadius, 0, Math.PI * 2);
+                    ctx.fillStyle = grad;
+                    ctx.fill();
+
+                    // 2. Skarp, balanserad ljudkrans (48 mjuka staplar kring cirkeln)
+                    const bars = 48;
+                    const innerRing = btnRadius + 9;
+                    ctx.lineCap = 'round';
+                    ctx.lineWidth = 2.6;
+
+                    for (let i = 0; i < bars; i++) {
+                        // Spegla frekvensspektrumet (fokus på talregistret) för en harmonisk ring
+                        const mirrorIdx = i < bars / 2 ? i : (bars - 1 - i);
+                        const binIndex = Math.min(freqData.length - 1, 2 + Math.floor(mirrorIdx * 1.4));
+                        const value = freqData[binIndex] / 255;
+                        const barLen = 3 + value * (maxExpand * 0.72);
+
+                        const angle = (i / bars) * Math.PI * 2 - Math.PI / 2;
+                        const x1 = cx + Math.cos(angle) * innerRing;
+                        const y1 = cy + Math.sin(angle) * innerRing;
+                        const x2 = cx + Math.cos(angle) * (innerRing + barLen);
+                        const y2 = cy + Math.sin(angle) * (innerRing + barLen);
+
+                        const alpha = 0.25 + value * 0.72;
+                        ctx.strokeStyle = value > 0.55
+                            ? `rgba(${secondaryRgb}, ${alpha})`
+                            : `rgba(${primaryRgb}, ${alpha})`;
+
+                        ctx.beginPath();
+                        ctx.moveTo(x1, y1);
+                        ctx.lineTo(x2, y2);
+                        ctx.stroke();
+                    }
+                };
+
+                animationId = requestAnimationFrame(render);
+            }
+
+            /* =====================================================================
+               Händelsehanterare
+               ===================================================================== */
+            el.toggleBtn.addEventListener('click', async () => {
+                if (state.isRunning) {
+                    await stopAudio();
+                } else {
+                    await startAudio();
+                }
+            });
+
+            // Ljudlägen (byter omedelbart i realtid utan avbrott)
+            el.modeButtons.forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const nextMode = btn.dataset.mode;
+                    if (!MODES[nextMode]) return;
+                    state.mode = nextMode;
+                    updateModeUI();
+                    applyModeParameters(true);
+                    saveSettings();
+                });
+            });
+
+            // Förstärkning: reglage + finjustering med - / +
+            function setGain(newValue) {
+                state.gain = Math.max(0, Math.min(5, Math.round(newValue * 10) / 10));
+                updateGainUI();
+                applyGainSetting();
+                saveSettings();
+            }
+
+            el.gainSlider.addEventListener('input', (e) => {
+                setGain(parseFloat(e.target.value));
+            });
+
+            el.gainDownBtn.addEventListener('click', () => setGain(state.gain - 0.1));
+            el.gainUpBtn.addEventListener('click', () => setGain(state.gain + 0.1));
+
+            // Inställningspanel
+            el.openSettingsBtn.addEventListener('click', openSettings);
+            el.micChipBtn.addEventListener('click', openSettings);
+            el.closeSettingsBtn.addEventListener('click', closeSettings);
+            el.sheetBackdrop.addEventListener('click', closeSettings);
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && el.settingsSheet.classList.contains('open')) {
+                    closeSettings();
+                }
+            });
+
+            // Mikrofonbyte
+            el.micSelect.addEventListener('change', async () => {
+                state.selectedMicId = el.micSelect.value;
+                saveSettings();
+                updateMicChipUI();
+                await restartAudioIfRunning(state.selectedMicId);
+            });
+
+            el.refreshMicsBtn.addEventListener('click', refreshDeviceList);
+
+            // Mono-mix (uppdateras i realtid utan omstart)
+            el.monoToggle.addEventListener('change', () => {
+                state.monoMix = el.monoToggle.checked;
+                applyMonoMixSetting();
+                saveSettings();
+            });
+
+            // Webbläsarens brusfilter (kräver omstart av ljudspåret om aktiv)
+            el.noiseSuppressionToggle.addEventListener('change', async () => {
+                state.noiseSuppression = el.noiseSuppressionToggle.checked;
+                saveSettings();
+                await restartAudioIfRunning(state.selectedMicId);
+            });
+
+            // Vänster/Höger-balans (uppdateras i realtid utan omstart)
+            el.balanceSlider.addEventListener('input', (e) => {
+                state.balance = parseFloat(e.target.value);
+                updateBalanceUI();
+                applyBalanceSetting();
+                saveSettings();
+            });
+
+            el.resetBalanceBtn.addEventListener('click', () => {
+                state.balance = 0;
+                updateBalanceUI();
+                applyBalanceSetting();
+                saveSettings();
+            });
+
+            // Känn av när trådlös mottagare kopplas in eller ur
+            if (navigator.mediaDevices && typeof navigator.mediaDevices.addEventListener === 'function') {
+                navigator.mediaDevices.addEventListener('devicechange', refreshDeviceList);
+            }
+
+            window.addEventListener('resize', resizeCanvas);
+
+            /* =====================================================================
+               Initiering vid sidladdning
+               ===================================================================== */
+            function init() {
+                if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                    el.sslWarning.classList.remove('hidden');
+                }
+
+                loadSettings();
+
+                // Synka kontroller med sparade inställningar
+                updateGainUI();
+                updateModeUI();
+                updateBalanceUI();
+                el.monoToggle.checked = state.monoMix;
+                el.noiseSuppressionToggle.checked = state.noiseSuppression;
+
+                resizeCanvas();
+                drawIdleRing();
+                refreshDeviceList();
+            }
+
+            init();
+        })();
+    </script>
+</body>
+</html>
